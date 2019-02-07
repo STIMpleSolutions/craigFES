@@ -8,10 +8,10 @@
  *             
  * Owner: STIMple Solutions Team
  * Managed by: Jay Drobnick and Annelyse Baker
- * Last updated: 2/5/2019
+ * Last updated: 1/31/2019
  */
 
-#include <HardwareSerial.h>
+#include <HardwareSerial.h> //include the library necessary to use the '?' menu for development
 
 #define freqLED 60 // this is the frequency, in Hz. This is high because I'm driving an LED for testing
 #define ledChannel 0 // the channel we want to use 
@@ -20,10 +20,10 @@
 //char cmd = '';
 
 
-int freq;
-int dutyCycle;
-volatile int outputVoltagePWM = 0; // this is the PWM value passed to the DAC which will create a percieved output voltage
-volatile float percievedVoltage;
+volatile int freq; //variable to set the desired frequency of reference PWM (in Hz)
+volatile int dutyCycle; // variable to set the desired duty cycle (pulse width) of the reference PWM (0-255)
+volatile int outputVoltagePWM = 0; // this is the PWM value passed to the DAC which will create a percieved output voltage (0-255)
+volatile float percievedVoltage; // this is a variable used to display the percieved output voltage from the DAC
 
 // --- SETUP FUNCTION (Runs only once at boot) ---
 void setup() {
@@ -44,21 +44,21 @@ void setup() {
              // we need to figure out how to scale frequency based off the clock speed
 
   // set up the interrupt for signals
-  attachInterrupt(digitalPinToInterrupt(ledPin), channel1_ISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ledPin), channel1_ISR, CHANGE); // creates an interrupt that is triggerd by the ledPin
 }
 
 // --- MAIN LOOP FUNCTION ---
 void loop(){
-  char cmd = '?';
+  char cmd = '?'; // variable used to enter the development menu
   int wait = 1;
-  int i = 0;
+  int i = 0; // iteration variable used for loops
 
   if(Serial.available()) {
     cmd = Serial.read();  
-
-    switch(cmd) {
+    
+    switch(cmd) { // beginning of the '?' menu options
       
-      case '?':
+      case '?': // will print a list of development controls
         Serial.println("-------------------------------");
         Serial.println("?: Help menu");
         Serial.println("L: LED");
@@ -69,7 +69,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
       
-      case 'L':
+      case 'L': // used for tesing basic PWM using an LED hooked up to a pin attached to a PWM channel
         // increase the LED brightness
         for(int dutyCycle = 0; dutyCycle <= 255; dutyCycle++){   
           // changing the LED brightness with PWM
@@ -84,7 +84,7 @@ void loop(){
         }
        break;
 
-       case 'F':
+       case 'F': // Raise the frequency of the reference PWM
         Serial.print("The frequency was: ");
         Serial.println(freq);
         freq = freq + 10;
@@ -94,7 +94,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
 
-      case 'f':
+      case 'f': // Lower the frequency of the reference PWM
         Serial.print("The frequency was: ");
         Serial.println(freq);
         freq = freq - 10;
@@ -104,7 +104,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
      
-      case 'D':
+      case 'D': // increase the duty cycle of the reference PWM
         dutyCycle = dutyCycle + 5;
         ledcWrite(ledChannel, dutyCycle);
         Serial.print("The duty cycle is now: ");
@@ -112,7 +112,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
 
-      case 'd':
+      case 'd': // decrease the duty cycle of the reference PWM
         dutyCycle = dutyCycle - 5;
         ledcWrite(ledChannel, dutyCycle);
         Serial.print("The duty cycle is now: ");
@@ -120,7 +120,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
 
-      case 'A':
+      case 'A': // increase the amplitude of the DAC output
         outputVoltagePWM = outputVoltagePWM + 5;
         percievedVoltage = outputVoltagePWM * 0.0125;
         Serial.print("The amplitude is now: ");
@@ -131,7 +131,7 @@ void loop(){
         Serial.println("-------------------------------");
       break;
 
-      case 'a':
+      case 'a': // decrease the amplitude of the DAC output
         outputVoltagePWM = outputVoltagePWM - 5;
         percievedVoltage = outputVoltagePWM * 0.0125;
         Serial.print("The amplitude is now: ");
@@ -148,15 +148,13 @@ void loop(){
           delay(1500);            
         } 
         dacWrite(25,i);
-      break;
-        
-    }
-   
+      break;   
+    }  
   }
-  
-}
+} // end of main loop function
 
 // --- CHANNEL 1 ISR ---
+// this ISR is used to "pass" frequency and duty cycle parameters on to the DAC output
 void channel1_ISR(){
   if(digitalRead(ledPin) == HIGH){
     dacWrite(25, outputVoltagePWM);
@@ -164,4 +162,4 @@ void channel1_ISR(){
   else if(digitalRead(ledPin) == LOW){
     dacWrite(25, 0);
   }
-}
+} // end of channel 1 ISR
