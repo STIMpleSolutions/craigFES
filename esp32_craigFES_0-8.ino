@@ -1,21 +1,9 @@
 /*
- * Title: sample_ledcPWM
- * Purpose: This script was created to check basic functionality of the ESP32 using the Arduino IDE
- *          Specifically, this script tests the function of the ledc PWM functionality of the ESP32
- *          
- * Background: The ESP32 has 16 LEDC PWM channels which are capable of outputting independent signals. 
- *             This seems like it could be useful for our multi-channel device, as long as PWM is a valid solution for implementation
- *             
+ * Title: CraigFES Stim Main Code            
  * Owner: STIMple Solutions Team
  * Managed by: Jay Drobnick and Annelyse Baker
- * Last updated: 3/11//2019
+ * Last updated: 4/14//2019
  */
-
-// ---- TO DO -----
-// ---- Delete entries when completed ----
-// Create ISR for the start/stop button
-// Add functionality to start/stop the stim on both channels independently as well as simultaneously
-
 
 // ---- LIBRARIES ----
 #include <HardwareSerial.h> //include the library necessary to use the '?' menu for development
@@ -75,19 +63,9 @@ volatile int modeNumber = 12; // variable to determine which "mode" the device i
 volatile int pastMode = 6;
 volatile bool modeSwitch = false;
 int amp1old = 0; int amp2old = 0; 
-int freq1old, freq2old, duty1old, duty2old, ramp1old, ramp2old, on1old, on2old, off1old, off2old;
-/* MODE NUMBERS REFERENCE COMMENT
- *  0 - channel 1 amplitude
- *  1 - channel 1 frequency
- *  2 - channel 1 duty cucyle
- *  3 - channel 2 amplitude
- *  4 - channel 2 frequency
- *  5 - channel 2 duty cycle
- *  6 - no selection
- */
- 
+int freq1old, freq2old, duty1old, duty2old, ramp1old, ramp2old, on1old, on2old, off1old, off2old; 
 
-  void IRAM_ATTR onTimer(){
+void IRAM_ATTR onTimer(){
   static enum signalStates state1 = OFF;
   static int numberOfTime1 = 0;
   static int ampLevel1 = 0;
@@ -184,10 +162,8 @@ void setup() {
   // put your setup code here, to run once:
   ledcSetup(ledChannel, 60, resolution); // set up the ledc parameters (channel, frequency, resolution(in bits) )
   ledcAttachPin(ledPin, ledChannel); // attack the chosen GPIO to a chosen PWM channel
-  
   ledcSetup(pwmchan1, freq1, resolution); // set up the pwm for channel 1  
   ledcAttachPin(pulse1, pwmchan1);          // attach the channel 1 pin to the pwm object for chan 1
-  
   ledcSetup(pwmchan2, freq2, resolution); // set up pwm for channel 2
   ledcAttachPin(pulse2, pwmchan2);          // attack the channel 2 pin to the pwm object for chan 2
   
@@ -195,29 +171,23 @@ void setup() {
   pinMode(downButton, INPUT_PULLUP);    // set downButton as input
   pinMode(modeButton, INPUT_PULLUP);    // set modeButton as input
   pinMode(startButton, INPUT_PULLUP);   // set startButton as input
-
   pinMode(safe1, INPUT);
   pinMode(safe2, INPUT);
-
   pinMode(pulse1, OUTPUT);
   pinMode(pulse2, OUTPUT);
   pinMode(dac1, OUTPUT);
   pinMode(dac2, OUTPUT);
- 
+  
   Serial.begin(115200); // sets the BAUD rate
-
   /* Use 1st timer of 4 */
   /* 1 tick take 1/(80MHZ/80) = 1us so we set divider 80 and count up */
   timer = timerBegin(0, 80, true);
-
   /* Attach onTimer function to our timer */
   timerAttachInterrupt(timer, &onTimer, true);
-
   /* Set alarm to call onTimer function every second 1 tick is 1us
   => 1 millisecond is 1000us */
   /* Repeat the alarm (third parameter) */
   timerAlarmWrite(timer, 1000, true);
-
   /* Start an alarm */
   timerAlarmEnable(timer);
   Serial.println("start timer");
@@ -232,15 +202,25 @@ void setup() {
   // INSERT CODE FOR THE WELCOME SCREEN HERE
   // PUT A DELAY AFTER THE WELCOME SCREEN APPEARS SO THAT IT STAYS VISIBLE FOR A PERIOD OF TIME
   testLines(ILI9341_CYAN);
-  tft.setCursor(320/2+20, (240/2));
+  //tft.setCursor(320/2+20, (240/2));
   tft.fillScreen(ILI9341_BLACK);
   tft.setTextColor(ILI9341_ORANGE);
   tft.setTextSize(3);
-
-  tft.print("Welcome");
+  tft.println("CraigFES");
+  tft.setTextSize(2);
+  tft.setTextColor(ILI9341_CYAN);
+  tft.println("STIMple Solutions");
+  tft.setTextSize(1);
+  tft.setTextColor(ILI9341_WHITE);
+  tft.println("Press any button to continue...");
   Serial.println("displaying welcome screen...");
   
   delay(1000); // show intro screen for 1 second
+
+  //while(digitalRead(upButton) == true || digitalRead(downButton) == true || digitalRead(modeButton) == true || digitalRead(startButton) == true);
+  while(Serial.available()==false); // FOR TESTING WITHOUT THE FULL UNIT ONLY!!
+  onOff = false;
+  modeNumber = 12;
   
   Serial.println("displaying parameter screen for first time...");
   //tft.fillScreen(ILI9341_BLACK);
@@ -249,9 +229,11 @@ void setup() {
 
 // ---- MAIN LOOP FUNCTION ----
 void loop(){
-  char cmd = '?'; // variable used to enter the development menu (obsolete)
+  
   int wait = 1;
   int i = 0; // iteration variable used for loops
+
+  jaystestfunction();
 
   if(modeSwitch == true){
     printScreen();
@@ -504,7 +486,6 @@ void loop(){
       off2old = offTime2;
     break;
   } // end of switch
-
 } // end of main loop function
 
 // This will interrupt when the on/off button is pressed
@@ -521,16 +502,14 @@ void startStopStim(){
     Serial.println("stim onned");
     Serial.println(duty1);
     Serial.println(duty2);
-    
     ledcSetup(pwmchan1, freq1, resolution);
     ledcWrite(pwmchan1, duty1); // writes the pwm channel with the value stored in duty1 (channel 1 stim
     ledcSetup(pwmchan2, freq2, resolution);
     ledcWrite(pwmchan2, duty2);
-//    ramp(); // we don't need to call this; after we exit the ISR and start the loop again the rmap will execute
     onOff = true;
     modeNumber = 12;
-    printScreen();
   }
+  printScreen();
 }
 
 // This will interrupt when the mode button is pressed
@@ -542,7 +521,10 @@ void changeMode(){
     Serial.print("Mode changed to ");
     Serial.println(modeNumber);
   }
-  
+  if(onOff == true){
+    modeNumber = 11;
+  }
+  printScreen();
 }
 
 void printScreen(){
@@ -556,9 +538,8 @@ void printScreen(){
   if(modeNumber == 0){
     tft.setTextColor(ILI9341_YELLOW);
   } else tft.setTextColor(ILI9341_WHITE);
-  tft.print("Amp:  ");
-  tft.print(amp1);
-  tft.println(" PWM");
+  tft.print("Power Level:  ");
+  tft.println(amp1);
   
   if(modeNumber == 1){
     tft.setTextColor(ILI9341_YELLOW);
@@ -603,9 +584,8 @@ void printScreen(){
   if(modeNumber == 6){
     tft.setTextColor(ILI9341_YELLOW);
   } else tft.setTextColor(ILI9341_WHITE);
-  tft.print("Amp:  ");
+  tft.println("Power Level:  ");
   tft.print(amp2);
-  tft.println(" PWM");
   
   if(modeNumber == 7){
     tft.setTextColor(ILI9341_YELLOW);
@@ -710,4 +690,53 @@ unsigned long testLines(uint16_t color) {
 
   yield();
   return micros() - start;
+}
+
+void jaystestfunction(){
+// ----- DEVELOPMENT MENU (COMMENT OUT WHEN NOT NEEDED) ------
+// ----- This menu will not be part of the final code --------
+char cmd;
+  if(Serial.available()) {
+    cmd = Serial.read();
+
+    switch(cmd) {
+
+      case '?':
+        Serial.println("-------------------------------");
+        Serial.println("?: Help menu");
+        Serial.println("s: start button");
+        Serial.println("m: mode button");
+        Serial.println("u: up button");
+        Serial.println("d: down button");
+        Serial.println("-------------------------------");
+      break;
+
+      case 's': // start/stop button simulation
+        startStopStim();
+      break;
+
+      case 'm': // mode button simulatoin
+        changeMode();
+      break;
+
+      case 'u': // up button simulation
+        if      (modeNumber == 0) amp1 = amp1 + 10;
+        else if (modeNumber == 1) freq1 = freq1 + 10;
+        else if (modeNumber == 2) duty1 = duty1 + 10;
+        else if (modeNumber == 3) amp2 = amp2 + 10;
+        else if (modeNumber == 4) freq2 = freq2 + 10;
+        else if (modeNumber == 5) duty2 = duty2 + 10;
+      break;
+
+      case 'd': // down button simulation
+        if      (modeNumber == 0) amp1--;
+        else if (modeNumber == 1) freq1--;
+        else if (modeNumber == 2) duty1--;
+        else if (modeNumber == 3) amp2--;
+        else if (modeNumber == 4) freq2--;
+        else if (modeNumber == 5) duty2--;
+      break;
+      
+    }
+  }
 }
